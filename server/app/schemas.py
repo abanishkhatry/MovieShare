@@ -1,15 +1,12 @@
 from pydantic import BaseModel, EmailStr
-from datetime import datetime
 
-# seeking informations that are only required for login/authentication
-class UserAuth(BaseModel): 
-    username: str
-    email: EmailStr
-    hashed_password: str 
-    created_at: datetime 
-
-
+# while registering a new user
 class UserCreate(BaseModel):
     username: str
     email: EmailStr
     password: str 
+
+# information user have to fill while logging in
+class UserLogin(BaseModel):
+    email: EmailStr
+    password: str     
