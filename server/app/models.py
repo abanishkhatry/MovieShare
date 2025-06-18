@@ -1,5 +1,4 @@
-from sqlalchemy import Column, String, Integer, DateTime, Text,  ForeignKey
-from sqlalchemy.sql import func
+from sqlalchemy import Column, String, Integer, DateTime, Text,  ForeignKey, PrimaryKeyConstraint
 from sqlalchemy.orm import relationship
 from .database import Base
 from datetime import datetime
@@ -18,7 +17,7 @@ class User(Base):
     email = Column(String, unique=True, nullable=False, index=True)
     username = Column(String, unique=True, nullable=False)
     password = Column(String, nullable=False)
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    created_at = Column(DateTime(timezone=True), server_default=datetime.utcnow)
     # links the user to all the posts made by him, by going to Post class. 
     posts = relationship("Post", back_populates="owner")
 
@@ -44,3 +43,23 @@ class Post(Base):
     So, post.owner will help us get the owner of the post, and user.posts will help us to get all posts made by the user
     """
     owner = relationship("User", back_populates="posts")
+
+# New table in the PostgreSQL database, that connects the user and the post, if its liked by the user
+class PostLike(Base):
+    _tablename_ = "post_likes"
+    # both user and post _id create many-to-one relation with User and Post model repectively. 
+    user_id = Column(Integer, ForeignKey("users.id"))
+    post_id = Column(Integer, ForeignKey("posts.id"))
+    # prevents duplicates,a user can only like a specific post once
+    __table_args__ = (
+        PrimaryKeyConstraint("user_id", "post_id"),
+    )
+    # This also adds a new property to the User Model, i.e. user.liked_posts which gives all 
+    # the likes that user had made. 
+    user = relationship("User", backref="liked_posts")
+
+    # This also adds a new property to the Post Model, i.e. post.likes whihc is a list of all 
+    # PostLike objects pointing to this post.
+    post = relationship("Post", backref="likes")
+
+
