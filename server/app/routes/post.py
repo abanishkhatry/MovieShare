@@ -49,7 +49,22 @@ def get_posts(
         query = query.order_by(models.Post.created_at.desc())    
     
     query = query.offset(offset).limit(limit) 
-    return query.all()
+
+    all_posts = query.all()
+
+    # Build response manually with like counts
+    response = []
+    for post in all_posts:
+        response.append({
+            "id": post.id,
+            "title": post.title,
+            "content": post.content,
+            "created_at": post.created_at,
+            "owner_id": post.owner_id,
+            "like_count": len(post.likes)
+        })
+
+    return response
 
 # This function checks if a requested post exists or not. 
 def get_post_or_404(post_id: int, db: Session):
@@ -103,4 +118,48 @@ def get_my_posts(
     db: Session = Depends(database.get_db),
     current_user: models.User = Depends(auth.get_current_user)
 ):
-    return db.query(models.Post).filter(models.Post.owner_id == current_user.id).all()
+    all_my_posts = db.query(models.Post).filter(models.Post.owner_id == current_user.id).all()
+
+    # Build response manually with like counts
+    response = []
+    for post in all_my_posts:
+        response.append({
+            "id": post.id,
+            "title": post.title,
+            "content": post.content,
+            "created_at": post.created_at,
+            "owner_id": post.owner_id,
+            "like_count": len(post.likes)
+        })
+
+    return response
+
+
+
+# This helps to state the status of a post liked/unliked by an user. 
+@router.post("/{post_id}/like")
+def toggle_like_post(
+    post_id: int,
+    db: Session = Depends(database.get_db),
+    current_user: models.User = Depends(auth.get_current_user)
+):
+    # Make sure the post exists
+    get_post_or_404(post_id, db)
+
+    # Check if the like already exists
+    existing_like = db.query(models.PostLike).filter_by(
+        user_id=current_user.id,
+        post_id=post_id
+    ).first()
+
+    if existing_like:
+        # User already liked it → unlike (remove)
+        db.delete(existing_like)
+        db.commit()
+        return {"message": "Post unliked."}
+    else:
+        # User hasn't liked it yet → like it
+        new_like = models.PostLike(user_id=current_user.id, post_id=post_id)
+        db.add(new_like)
+        db.commit()
+        return {"message": "Post liked."}
