@@ -26,6 +26,7 @@ class PostOut(PostBase):
     id: int
     created_at: datetime
     owner_id: int
+    like_count : int
 
     class Config:
         #  allows Pydantic to work directly with SQLAlchemy objects
