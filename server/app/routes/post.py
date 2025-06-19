@@ -163,3 +163,41 @@ def toggle_like_post(
         db.add(new_like)
         db.commit()
         return {"message": "Post liked."}
+
+
+@router.post("/{post_id}/comments", response_model=schemas.CommentOut)
+def create_comment(
+        post_id: int,
+        # make sure the comment body has content
+        comment: schemas.CommentCreate,
+        db: Session = Depends(database.get_db),
+        current_user: models.User = Depends(auth.get_current_user)
+): 
+    # ensures the post exists 
+    get_post_or_404(post_id, db)
+    
+    new_comment = models.Comment(
+        content=comment.content, 
+        post_id=post_id, 
+        user_id=current_user.id
+    )
+    # Track this new object. It’s ready to be inserted into the database.
+    db.add(new_comment)
+    # actually changes the database by adding the new_comment
+    db.commit()
+    # Reloads the object from the database to get all up-to-date values , like id and created_at
+    db.refresh(new_comment)
+
+    return new_comment
+
+# response_model returns the result as list of comments. 
+@router.get("/{post_id}/comments", response_model= list[schemas.CommentOut])
+def get_comments_for_post(
+        post_id : int , 
+        db: Session = Depends(database.get_db)
+): 
+    get_post_or_404(post_id, db)
+    # sorting all the comments in that post in ascending order
+    comments = db.query(models.Comment).filter(models.Comment.post_id == post_id).order_by(models.Comment.created_at.asc()).all()
+
+    return comments
