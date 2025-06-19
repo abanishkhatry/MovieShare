@@ -1,4 +1,4 @@
-from sqlalchemy import Column, String, Integer, DateTime, Text,  ForeignKey, PrimaryKeyConstraint
+from sqlalchemy import Column, String, Integer, DateTime, Text, ForeignKey, PrimaryKeyConstraint
 from sqlalchemy.orm import relationship
 from .database import Base
 from datetime import datetime
@@ -61,5 +61,28 @@ class PostLike(Base):
     # This also adds a new property to the Post Model, i.e. post.likes whihc is a list of all 
     # PostLike objects pointing to this post.
     post = relationship("Post", backref="likes")
+
+
+
+class Comment(Base): 
+    # name of the table in database
+    _tablename_ = "comments"
+    # comment's features
+    id = Column (Integer, primary_key=True, index = True)
+    content = Column (Text, nullable = False)
+    created_at = Column (DateTime, default= datetime.now)
+    # connecting the comment to the post, and the user
+    user_id = Column (Integer, ForeignKey("posts.id"), nullable = False)
+    post_id = Column (Integer, ForeignKey("posts.id"), nullable=False)
+    
+    """
+    - sets up relation between the Comment model and the User, Post modal 
+    - backref = "comments", gives access to : 
+    1. comment.user : this gives the User object who wrote this comment
+    2. user.comments : gives a list of all Comment object associated with this user. 
+    So, backref creates the reverse property automatically.
+    """
+    user = relationship ("User" , backref= "comments")
+    post = relationship ("Post", backref= "comments")
 
 
