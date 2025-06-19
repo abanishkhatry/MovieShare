@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Path
 from sqlalchemy.orm import Session
 from .. import models, schemas, database, auth
 from typing import Optional
@@ -148,7 +148,7 @@ def toggle_like_post(
     current_user: models.User = Depends(auth.get_current_user)
 ):
     # Make sure the post exists
-    get_post_or_404(post_id, db)
+    post = get_post_or_404(post_id, db)
 
     # Check if the like already exists
     existing_like = db.query(models.PostLike).filter_by(
@@ -165,6 +165,14 @@ def toggle_like_post(
         # User hasn't liked it yet → like it
         new_like = models.PostLike(user_id=current_user.id, post_id=post_id)
         db.add(new_like)
+        # Only notify if liker ≠ post owner
+        if current_user.id != post.owner_id:
+            notification = models.Notification(
+            user_id=post.owner_id,
+            post_id=post_id,
+            type="like"
+         )
+            db.add(notification)
         db.commit()
         return {"message": "Post liked."}
 
@@ -178,7 +186,7 @@ def create_comment(
         current_user: models.User = Depends(auth.get_current_user)
 ): 
     # ensures the post exists 
-    get_post_or_404(post_id, db)
+    post = get_post_or_404(post_id, db)
     
     new_comment = models.Comment(
         content=comment.content, 
@@ -187,6 +195,16 @@ def create_comment(
     )
     # Track this new object. It’s ready to be inserted into the database.
     db.add(new_comment)
+
+    # Only notify if commenter ≠ post owner
+    if current_user.id != post.owner_id:
+        notification = models.Notification(
+        user_id=post.owner_id,
+        post_id=post_id,
+        type="comment"
+    )
+        db.add(notification)
+
     # actually changes the database by adding the new_comment
     db.commit()
     # Reloads the object from the database to get all up-to-date values , like id and created_at
@@ -205,3 +223,44 @@ def get_comments_for_post(
     comments = db.query(models.Comment).filter(models.Comment.post_id == post_id).order_by(models.Comment.created_at.asc()).all()
 
     return comments
+
+# returns notifications for a post to the owner
+@router.get("/notifications", response_model=list[schemas.NotificationOut])
+def get_notifications(
+    db: Session = Depends(database.get_db),
+    current_user: models.User = Depends(auth.get_current_user)
+):
+    notifications = (
+        db.query(models.Notification)
+        .filter(models.Notification.user_id == current_user.id)
+        .order_by(models.Notification.created_at.desc())
+        .all()
+    )
+    return notifications
+
+
+# gives the status of whether a notification has been seen or not. 
+@router.patch("/notifications/{notification_id}", response_model=schemas.NotificationOut)
+def mark_notification_as_seen(
+    # function of FastAPI, that helps to extract parameters from a path.
+    # here , int gives hint to Path for what type of parameter to extract from the path. 
+    # so if the path is notifications/5/ , Path will extract 5 and pass it as notification_id's value
+    # here description is just of help document the process, to make it easy to read and understand.
+    notification_id: int = Path(..., description="ID of the notification to mark as seen"),
+    db: Session = Depends(database.get_db),
+    current_user: models.User = Depends(auth.get_current_user)
+):
+    notification = db.query(models.Notification).filter_by(id=notification_id).first()
+
+    if not notification:
+        raise HTTPException(status_code=404, detail="Notification not found.")
+
+    if notification.user_id != current_user.id:
+        raise HTTPException(status_code=403, detail="You do not have permission to modify this notification.")
+
+    notification.seen = True
+    db.commit()
+    db.refresh(notification)
+
+    return notification
+

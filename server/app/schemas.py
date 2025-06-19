@@ -49,3 +49,15 @@ class CommentOut(CommentBase):
 
     class Config : 
         orm_mode = True     
+
+
+class NotificationOut(BaseModel):
+    id: int
+    user_id: int
+    post_id: int
+    type: str
+    seen: bool
+    created_at: datetime
+
+    class Config:
+        orm_mode = True

@@ -1,4 +1,4 @@
-from sqlalchemy import Column, String, Integer, DateTime, Text, ForeignKey, PrimaryKeyConstraint
+from sqlalchemy import Column, String, Integer, Boolean, DateTime, Text, ForeignKey, PrimaryKeyConstraint
 from sqlalchemy.orm import relationship
 from .database import Base
 from datetime import datetime
@@ -71,9 +71,9 @@ class Comment(Base):
     # comment's features
     id = Column (Integer, primary_key=True, index = True)
     content = Column (Text, nullable = False)
-    created_at = Column (DateTime, default= datetime.now)
+    created_at = Column (DateTime, default= datetime.utcnow)
     # connecting the comment to the post, and the user
-    user_id = Column (Integer, ForeignKey("posts.id"), nullable = False)
+    user_id = Column (Integer, ForeignKey("users.id"), nullable = False)
     post_id = Column (Integer, ForeignKey("posts.id"), nullable=False)
     
     """
@@ -87,3 +87,19 @@ class Comment(Base):
     post = relationship ("Post", backref= "comments")
 
 
+
+class Notification(Base): 
+    _tablename_ = "notifications"
+
+    id = Column(Integer, primary_key= True, index = True)
+    # user id of the post owner who will receive the notification
+    user_id = Column(Integer, ForeignKey  = "users.id", nullable= False)
+    post_id = Column(Integer, ForeignKey  = "posts.id", nullable= False)
+    # maybe like or comment
+    type = Column(Integer, nullable= False)
+    # whether the user has read the notification
+    seen = Column(Boolean, default= False)
+    created_at = Column(DateTime, default = datetime.utcnow)
+
+    user = relationship("User", backref="notifications")
+    post = relationship("Post", backref="notifications")
