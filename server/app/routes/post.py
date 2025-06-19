@@ -33,6 +33,8 @@ def get_posts(
     db: Session = Depends(database.get_db),    
     ):
     query = db.query(models.Post)
+    # selects all the posts that have public visibility
+    query = query.filter(models.Post.visibility == "public")
     # Apply filter if search is provided
     if search:
         # or_ allows filtering based on either condition
@@ -61,7 +63,8 @@ def get_posts(
             "content": post.content,
             "created_at": post.created_at,
             "owner_id": post.owner_id,
-            "like_count": len(post.likes)
+            "like_count": len(post.likes), 
+            "visibility" : post.visibility
         })
 
     return response
@@ -129,7 +132,8 @@ def get_my_posts(
             "content": post.content,
             "created_at": post.created_at,
             "owner_id": post.owner_id,
-            "like_count": len(post.likes)
+            "like_count": len(post.likes), 
+            "visibility" : post.visibility
         })
 
     return response

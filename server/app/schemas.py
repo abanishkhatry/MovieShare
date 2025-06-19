@@ -15,7 +15,8 @@ class UserLogin(BaseModel):
 # information user have to fill for posting
 class PostBase(BaseModel):
     title: str
-    content: str    
+    content: str   
+    visibility : str = "public" 
 
 # inherits from PostBase and helps to create a post
 class PostCreate(PostBase):
@@ -27,6 +28,7 @@ class PostOut(PostBase):
     created_at: datetime
     owner_id: int
     like_count : int
+    visibility : str 
 
     class Config:
         #  allows Pydantic to work directly with SQLAlchemy objects

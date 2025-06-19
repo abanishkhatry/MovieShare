@@ -35,6 +35,7 @@ class Post(Base):
     title = Column(String, nullable=False)
     content = Column(Text, nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow)
+    visibility = Column(String, nullable=False, default="public")
     #  Links this post to the user who created it
     owner_id = Column(Integer, ForeignKey("users.id"))
     """
