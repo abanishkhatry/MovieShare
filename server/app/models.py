@@ -103,3 +103,15 @@ class Notification(Base):
 
     user = relationship("User", backref="notifications")
     post = relationship("Post", backref="notifications")
+
+
+class PostBookmark(Base): 
+    _tablename_ = "post_bookmarks" 
+
+    user_id = Column(Integer, ForeignKey = "users.id", nullable = False)
+    post_id = Column (Integer, ForeignKey = "posts.id", nullable= False)
+    created_at = Column (DateTime, default=datetime.utcnow)
+    # From the User model, I can now access all posts this user has bookmarked.
+    user = relationship("User", backref="bookmarked_posts")
+    # The backref="bookmarked_by" creates a way to get all users who have bookmarked a given post
+    post = relationship("Post", backref="bookmarked_by")
