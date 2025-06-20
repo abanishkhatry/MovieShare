@@ -4,8 +4,6 @@ from .. import models, schemas, database, auth
 from typing import Optional
 from sqlalchemy import or_
 
-
-
 router = APIRouter(
     prefix="/posts",
     tags=["Posts"]
@@ -95,7 +93,6 @@ def update_post(
     # updating these changes in the database
     db.commit()
     db.refresh(post)
-
     return post
 
 # This function allows user to delete only their own posts, and return proper errors for others.
@@ -176,7 +173,7 @@ def toggle_like_post(
         db.commit()
         return {"message": "Post liked."}
 
-
+# function that helps to create comments on a post
 @router.post("/{post_id}/comments", response_model=schemas.CommentOut)
 def create_comment(
         post_id: int,
@@ -221,7 +218,6 @@ def get_comments_for_post(
     get_post_or_404(post_id, db)
     # sorting all the comments in that post in ascending order
     comments = db.query(models.Comment).filter(models.Comment.post_id == post_id).order_by(models.Comment.created_at.asc()).all()
-
     return comments
 
 # returns notifications for a post to the owner
@@ -264,3 +260,70 @@ def mark_notification_as_seen(
 
     return notification
 
+# function for the bookmark button to show if that post has been bookmarked or not. 
+@router.post("/{post_id}/bookmark")
+def toggle_bookmark_post (
+    post_id : int, 
+    db : Session = Depends(database.get_db), 
+    current_user : models.User = Depends(auth.get_current_user)
+): 
+    post = get_post_or_404(post_id, db)
+
+    # Checking if the user has already bookmarked this post
+    existing_bookmark = db.query(models.PostBookmark).filter_by(
+        user_id = current_user.id, 
+        post_id = post_id
+    ).first()
+    
+    # if post already bookmarked , then removing it from the bookmark
+    if existing_bookmark: 
+        db.delete(existing_bookmark)
+        db.commit()
+        return {"message": "Post removed from Bookmarks."}
+    
+    else: 
+        new_bookmark = models.PostBookmark(
+            user_id = current_user.id, 
+            post_id = post_id
+        )
+        # Here, as new_bookmark is an instance of models.PostBookmark and PostBookmark is related to tablename - "post_bookmarks"
+        # SQLAlchemy will know that these changes should be added to that table in the database. 
+        db.add(new_bookmark)
+        db.commit()
+
+        # Here, we are not using db.refresh(new_bookmark), because here we are not dealing with DB-generated fiels
+        # like id, created_at while returning , which may not be automatically updated by SQLAlchemy for which we 
+        # have to refresh. Since, here we are returning a message not the new_bookmark object, we don't have to refresh
+        return {"message" : "Post bookmarked"}
+    
+# returnig all the posts bookmarked by the user.      
+@router.get("/bookmarks", response_model= list[schemas.PostOut]) 
+def get_bookmarked_posts(
+    db : Session = Depends(database.get_db),
+    current_user : models.User = Depends(auth.get_current_user)
+) :
+    bookmarks = (
+        # temporarily creates a table bet Post and PostBookmark where their post_id are same.
+        db.query(models.Post)
+        .join(models.PostBookmark, models.Post.id == models.PostBookmark.post_id)
+        # then from that temporary table , if filters based on matching of the user_id
+        .filter(models.PostBookmark.user_id == current_user.id)
+        # this sorts the result from newest to oldest, as its based on the time they were created
+        .order_by(models.Post.created_at.desc())
+        .all()
+    )
+    return bookmarks
+
+# helps to know if the post is booked marked or not. 
+@router.get("/posts/{post_id}/is_bookedmarked")
+def is_post_bookmarked(
+    post_id: int, 
+    db: Session = Depends(database.get_db), 
+    current_user: models.User = Depends(auth.get_current_user)
+):
+    exists = db.query(models.PostBookmark).filter_by(
+        user_id=current_user.id, 
+        post_id=post_id
+    ).first()
+
+    return {"bookmarked": bool(exists)}
