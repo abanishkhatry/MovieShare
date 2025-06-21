@@ -64,6 +64,35 @@ def dashboard(current_user: models.User = Depends(auth.get_current_user)):
         "joined": current_user.created_at
     }
 
+@router.get("/me/profile", response_model=schemas.UserProfileOut)
+def get_my_profile(
+    current_user: models.User = Depends(auth.get_current_user)
+):
+    return current_user
+
+@router.patch("/me/profile", response_model = schemas.UserProfileOut)
+def update_my_profile(
+    update_data: schemas.UserProfileUpdate, 
+    db: Session = Depends(database.get_db), 
+    current_user: models.User = Depends(auth.get_current_user)
+):
+    """
+    If user wants to update their bio and favourite_genre, then update_data will hold that 
+    new schema. Then, we first covert that schema to a dic so that we can iterate through them 
+    as key value pairs. Here, field will be bio and favourite_genre and value will hold their 
+    respective values in each iteration. 
+    """
+
+    for field, value in update_data.dict(exclude_unset= True).items():
+        # equivalent to current_user.field = value, so it modifies the User Model 
+        # Eg: current_user.bio = "Thriller addict"
+        setattr(current_user, field, value)    
+
+    db.commit()
+    db.refresh(current_user)
+    return current_user
+
+
 @router.get("/api/status")
 def status():
     return {"status": "Backend is running"}

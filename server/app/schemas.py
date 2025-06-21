@@ -1,5 +1,6 @@
 from pydantic import BaseModel, EmailStr
 from datetime import datetime
+from typing import Optional
 
 # while registering a new user
 class UserCreate(BaseModel):
@@ -11,6 +12,24 @@ class UserCreate(BaseModel):
 class UserLogin(BaseModel):
     email: EmailStr
     password: str     
+
+# helps to set up the user profile, and send these info to the frontend
+class UserProfileOut(BaseModel):
+    id: int
+    email: EmailStr
+    name: Optional[str]
+    bio: Optional[str]
+    favorite_genre: Optional[str]
+    created_at: Optional[str]
+
+    class Config:
+        orm_mode = True
+
+# helps in updating user's profile. 
+class UserProfileUpdate(BaseModel):
+    name: Optional[str]
+    bio: Optional[str]
+    favorite_genre: Optional[str]
 
 # information user have to fill for posting
 class PostBase(BaseModel):
