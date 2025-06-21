@@ -18,10 +18,11 @@ class User(Base):
     username = Column(String, unique=True, nullable=False)
     password = Column(String, nullable=False)
     created_at = Column(DateTime(timezone=True), server_default=datetime.utcnow)
-
+    
     name = Column(Integer, nullable= True)
     bio = Column(Text, nullable=True)
     favourite_genre = Column (String , nullable = True)
+    avatar_url = Column (String, nullable = True)
     # links the user to all the posts made by him, by going to Post class. 
     posts = relationship("Post", back_populates="owner")
 

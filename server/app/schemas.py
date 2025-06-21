@@ -21,6 +21,7 @@ class UserProfileOut(BaseModel):
     bio: Optional[str]
     favorite_genre: Optional[str]
     created_at: Optional[str]
+    avatar_url : Optional[str]
 
     class Config:
         orm_mode = True

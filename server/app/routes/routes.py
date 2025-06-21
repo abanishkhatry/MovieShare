@@ -1,6 +1,8 @@
-from fastapi import APIRouter, HTTPException, Depends, status 
+from fastapi import APIRouter, HTTPException, Depends, status, File, UploadFile 
 from passlib.context import CryptContext
 from sqlalchemy.orm import Session 
+from uuid import uuid4
+import os
 from .. import models, auth, database, schemas
 
 # Creates a new router that can be included in your main app
@@ -92,8 +94,46 @@ def update_my_profile(
     db.refresh(current_user)
     return current_user
 
+@router.post("/me/avatar", status_code = 200)
+def upload_avatar(
+    file: UploadFile = File(...), 
+    db: Session = Depends(database.get_db), 
+    current_user : models.User = Depends(auth.get_current_user)
+): 
+ # checking for it the upload is a type of image i.e. image/jpeg, image/png
+ if not file.content_type.startswith("image/"):
+    raise HTTPException(status_code=400, detail="File must be an image.")
+ # this is extracting the image extension like png, jpg, jpeg
+ file_ext = os.path.splitext(file.filename)[1]  
+ # giving a new file name to that image
+ filename = f"avatar_{uuid4().hex}{file_ext}" 
+ # placing that img with new name into the avatars folder. 
+ file_path = os.path.join("../images/avatars", filename)
+
+ """
+    Now saving the file into the path we defined earlier, 
+    Since its not a plain text file, we use wb -> write binary mode
+
+    Here we are referring to a new file in that path as f and then 
+    we are reading the binary data of the file/image uploaded by the 
+    user. i.e. file.file.read() 
+
+    Then we are writing that binary code into that new file and saving it. 
+    So, f will now hold the image uploaded by user , in our defined file path
+ """
+ with open(file_path, "wb") as f: 
+    f.write(file.file.read())
+     # Store URL path in database (relative for now)
+     
+ current_user.avatar_url = f"/{file_path}"
+ db.commit()
+ db.refresh(current_user)
+
+ return {"message": "Avatar uploaded!", "avatar_url": current_user.avatar_url}
+
+
 
 @router.get("/api/status")
 def status():
-    return {"status": "Backend is running"}
+ return {"status": "Backend is running"}
 
