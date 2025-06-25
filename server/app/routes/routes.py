@@ -124,14 +124,38 @@ def upload_avatar(
  with open(file_path, "wb") as f: 
     f.write(file.file.read())
      # Store URL path in database (relative for now)
-     
+
  current_user.avatar_url = f"/{file_path}"
  db.commit()
  db.refresh(current_user)
 
  return {"message": "Avatar uploaded!", "avatar_url": current_user.avatar_url}
 
-
+# gives back the total posts, likes and bookmarked stats for the current user
+@router.get("/me/analytics")
+def get_user_analytics(
+   db: Session = Depends(database.get_db), 
+   current_user: models.User = Depends(auth.get_current_user)
+): 
+   # getting total posts for the current user
+   total_posts = db.query(models.Post).filter(models.Post.owner_id == current_user.id).count()
+   total_likes_received = (
+    db.query(models.PostLike)
+    .join(models.Post)
+    .filter(models.Post.owner_id == current_user.id)
+    .count()
+    )
+   total_bookmarked_posts = (
+    db.query(models.PostBookmark)
+    .filter(models.PostBookmark.user_id == current_user.id)
+    .count()
+)
+   return schemas.UserAnalytics(
+      total_posts = total_posts, 
+      total_likes_received = total_likes_received, 
+      total_bookmarked_posts = total_bookmarked_posts
+   )
+      
 
 @router.get("/api/status")
 def status():

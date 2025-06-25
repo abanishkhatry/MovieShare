@@ -81,3 +81,9 @@ class NotificationOut(BaseModel):
 
     class Config:
         orm_mode = True
+
+# helps to store total posts, likes, bookmarked value of a user.
+class UserAnalytics(BaseModel): 
+    total_posts: int
+    total_likes_received: int 
+    total_bookmarked_posts: int        
